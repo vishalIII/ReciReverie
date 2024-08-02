@@ -21,14 +21,14 @@ const RecipeList = () => {
     const fetchRecipes = async () => {
       try {
         dispatch(showLoading());
-        const response = await axios.get('http://localhost:3000/api/recipes');
+        const response = await axios.get('/api/recipes');
         setRecipes(response.data);
 
         const imagePromises = response.data.map(async (recipe) => {
           if (recipe.image && recipe.image._id) {
             try {
               setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: true }));
-              const imgResponse = await axios.get(`http://localhost:3000/api/image/${recipe.image._id}`, { responseType: 'blob' });
+              const imgResponse = await axios.get(`/api/image/${recipe.image._id}`, { responseType: 'blob' });
               const url = URL.createObjectURL(imgResponse.data);
               setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: false }));
               return { id: recipe.image._id, url };
@@ -57,7 +57,7 @@ const RecipeList = () => {
   }, [dispatch]);
 
   const handleRecipeClick = useCallback((recipe) => {
-    navigate(`/recipe/${recipe._id}`, { state: { recipe, imageUrl: imageUrls[recipe.image._id] } });
+    navigate(`/recipe/${recipe._id}`, { state: { recipe, imageUrl: imageUrls[recipe.image?._id] } });
   }, [navigate, imageUrls]);
 
   const handleLikeClick = useCallback(async (recipe) => {
@@ -71,13 +71,13 @@ const RecipeList = () => {
 
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const response = await axios.put(`http://localhost:3000/api/recipes/${recipe._id}/like`, {}, { headers });
+      const response = await axios.put(`/api/recipes/${recipe._id}/like`, {}, { headers });
 
       const updatedRecipes = recipes.map(r =>
         r._id === recipe._id ? response.data : r
       );
       setRecipes(updatedRecipes);
-  
+
     } catch (error) {
       console.error('Error updating likes:', error);
     }
@@ -144,6 +144,9 @@ const RecipeList = () => {
                     alt={recipe.name}
                     className="absolute inset-0 w-full h-full object-cover"
                     onLoad={() => setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: false }))}
+                    loading="lazy"
+                    role="presentation"
+                    decoding="async"
                     fetchPriority='high'
                   />
                 ) : (

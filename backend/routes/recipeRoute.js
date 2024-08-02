@@ -3,8 +3,7 @@ const router = express.Router();
 const Recipe = require('../models/recipeModel');
 const Image = require('../models/imageModel');
 const multer = require('multer');
-const fs = require('fs');
-const auth = require('../middlewares/authMiddleware')
+const auth = require('../middlewares/authMiddleware');
 
 // Multer setup
 const storage = multer.memoryStorage();
@@ -13,6 +12,16 @@ const upload = multer({ storage: storage }).single('image');
 // Create a new recipe
 router.post('/', upload, async (req, res) => {
   const { name, type, ingredients, process, rating, userInfo } = req.body;
+
+  // Validate incoming data
+  if (!name || !type || !ingredients || !process || !userInfo) {
+    return res.status(400).json({ message: 'Missing required fields', success: false });
+  }
+
+  // Ensure file is uploaded
+  if (!req.file) {
+    return res.status(400).json({ message: 'Image file is required', success: false });
+  }
 
   const newImage = new Image({
     data: req.file.buffer,
@@ -25,7 +34,7 @@ router.post('/', upload, async (req, res) => {
     const newRecipe = new Recipe({
       name,
       type,
-      ingredients: ingredients.split(','),
+      ingredients, // Assuming ingredients are sent as a comma-separated string
       process,
       image: savedImage._id,
       rating,
@@ -35,11 +44,12 @@ router.post('/', upload, async (req, res) => {
     const savedRecipe = await newRecipe.save();
     res.status(200).json({ message: "Added successfully", success: true });
   } catch (err) {
-    res.status(500).json({ message: err.message, success: false });
+    console.error('Error saving recipe:', err);
+    res.status(500).json({ message: 'Internal server error', success: false });
   }
 });
 
-// get All recipes
+// Get all recipes
 router.get('/all', async (req, res) => {
   try {
     const recipes = await Recipe.find().populate('image');
@@ -51,13 +61,15 @@ router.get('/all', async (req, res) => {
     });
     res.json(recipesWithBase64Images);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error fetching recipes:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
-// get all show recipes
+
+// Get all show recipes
 router.get('/', async (req, res) => {
   try {
-    const recipes = await Recipe.find({status:"show"}).populate('image');
+    const recipes = await Recipe.find({ status: "show" }).populate('image');
     const recipesWithBase64Images = recipes.map(recipe => {
       if (recipe.image && recipe.image.data) {
         recipe.image.data = recipe.image.data.toString('base64');
@@ -66,7 +78,8 @@ router.get('/', async (req, res) => {
     });
     res.json(recipesWithBase64Images);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error fetching recipes:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -74,18 +87,22 @@ router.get('/', async (req, res) => {
 router.get('/user', async (req, res) => {
   try {
     const { email, name } = req.query;
+    if (!email || !name) {
+      return res.status(400).json({ message: 'Missing required query parameters' });
+    }
     const recipes = await Recipe.find({ 'userInfo.email': email, 'userInfo.name': name }).populate('image');
-    
+
     const recipesWithBase64Images = recipes.map(recipe => {
       if (recipe.image && recipe.image.data) {
         recipe.image.data = recipe.image.data.toString('base64');
       }
       return recipe;
     });
-    
+
     res.json(recipesWithBase64Images);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error fetching user recipes:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -100,15 +117,19 @@ router.put('/toggle-status/:id', async (req, res) => {
     await recipe.save();
     res.json({ message: 'Status updated', status: recipe.status });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error updating recipe status:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-
-
+// Update a recipe
 router.put('/:id', auth, upload, async (req, res) => {
   const { id } = req.params;
   const { name, type, process, likes, ingredients } = req.body;
+
+  if (!name || !type || !process || !ingredients) {
+    return res.status(400).json({ message: 'Missing required fields' });
+  }
 
   try {
     const updatedData = {
@@ -116,14 +137,19 @@ router.put('/:id', auth, upload, async (req, res) => {
       type,
       process,
       likes,
-      ingredients,
+      ingredients: ingredients.split(','),
     };
 
     if (req.file) {
-      updatedData.image = req.file.path; // Save the image path
+      const newImage = new Image({
+        data: req.file.buffer,
+        contentType: req.file.mimetype,
+      });
+      const savedImage = await newImage.save();
+      updatedData.image = savedImage._id;
     }
 
-    const updatedRecipe = await Recipe.findByIdAndUpdate(id, updatedData, { new: true });
+    const updatedRecipe = await Recipe.findByIdAndUpdate(id, updatedData, { new: true }).populate('image');
 
     if (!updatedRecipe) {
       return res.status(404).json({ success: false, message: 'Recipe not found' });
@@ -132,13 +158,11 @@ router.put('/:id', auth, upload, async (req, res) => {
     res.json({ success: true, data: updatedRecipe });
   } catch (error) {
     console.error('Error updating recipe:', error);
-    res.status(500).json({ success: false, message: 'Error updating recipe', error: error.message });
+    res.status(500).json({ success: false, message: 'Internal server error', error: error.message });
   }
 });
 
-
 // Endpoint to like/unlike a recipe
-
 const MAX_RETRIES = 3;
 
 async function updateLikes(recipe, userId) {
@@ -172,7 +196,7 @@ router.put('/:id/like', auth, async (req, res) => {
         recipe = await Recipe.findById(id);
       } else {
         console.error('Error updating likes:', error);
-        return res.status(500).json({ error: 'An error occurred while updating likes' });
+        return res.status(500).json({ error: 'Internal server error' });
       }
     }
   }

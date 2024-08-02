@@ -17,7 +17,7 @@ const UserRecipeList = () => {
       try {
         dispatch(showLoading());
         if (user && user.email && user.name) {
-          const response = await axios.get('http://localhost:3000/api/recipes/user', {
+          const response = await axios.get('/api/recipes/user', {
             params: { email: user.email, name: user.name }
           });
           setRecipes(response.data);
@@ -26,7 +26,7 @@ const UserRecipeList = () => {
             if (recipe.image && recipe.image._id) {
               try {
                 setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: true }));
-                const imgResponse = await axios.get(`http://localhost:3000/api/image/${recipe.image._id}`, { responseType: 'blob' });
+                const imgResponse = await axios.get(`/api/image/${recipe.image._id}`, { responseType: 'blob' });
                 const url = URL.createObjectURL(imgResponse.data);
                 setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: false }));
                 return { id: recipe.image._id, url };
@@ -75,7 +75,10 @@ const UserRecipeList = () => {
                   alt={recipe.name}
                   className="absolute inset-0 w-full h-full object-cover"
                   onLoad={() => setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: false }))}
-                  fetchPriority='high'
+                  loading="lazy"
+                    role="presentation"
+                    decoding="async"
+                    fetchPriority='high'
                 />
               )}
             </div>
