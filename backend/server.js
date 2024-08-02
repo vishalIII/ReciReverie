@@ -11,18 +11,17 @@ const port = process.env.PORT || 3000;
 connectToMongo();
 
 const corsOptions = {
-  origin: 'http://localhost:5173', // Replace with your frontend URL
+  origin: 'http://localhost:5173', // Deployment = Replace with your frontend URL ---------------------------
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  allowedHeaders: ['Authorization', 'Content-Type'], // Add other headers as needed
-  credentials: true, // If you need to include cookies in the requests
+  allowedHeaders: ['Authorization', 'Content-Type'],
+  credentials: true,
 };
 app.use(cors(corsOptions));
 
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve static files
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
 // Routes
 const userRoute = require('./routes/userRoute');
 const recipeRoute = require('./routes/recipeRoute');
