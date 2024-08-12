@@ -8,8 +8,6 @@ import { showLoading, hideLoading } from '../redux/alertSlice';
 
 const RecipeList = () => {
   const [recipes, setRecipes] = useState([]);
-  const [imageUrls, setImageUrls] = useState({});
-  const [loadingImages, setLoadingImages] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [filterVeg, setFilterVeg] = useState(false);
   const [filterNonVeg, setFilterNonVeg] = useState(false);
@@ -23,29 +21,6 @@ const RecipeList = () => {
         dispatch(showLoading());
         const response = await axios.get('/api/recipes');
         setRecipes(response.data);
-
-        const imagePromises = response.data.map(async (recipe) => {
-          if (recipe.image && recipe.image._id) {
-            try {
-              setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: true }));
-              const imgResponse = await axios.get(`/api/image/${recipe.image._id}`, { responseType: 'blob' });
-              const url = URL.createObjectURL(imgResponse.data);
-              setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: false }));
-              return { id: recipe.image._id, url };
-            } catch (error) {
-              console.error('Error fetching image:', error);
-              return { id: recipe.image._id, url: null };
-            }
-          }
-          return { id: null, url: null };
-        });
-
-        const images = await Promise.all(imagePromises);
-        setImageUrls(images.reduce((acc, { id, url }) => {
-          if (id) acc[id] = url;
-          return acc;
-        }, {}));
-
       } catch (error) {
         console.error('Error fetching recipes:', error);
       } finally {
@@ -57,8 +32,8 @@ const RecipeList = () => {
   }, [dispatch]);
 
   const handleRecipeClick = useCallback((recipe) => {
-    navigate(`/recipe/${recipe._id}`, { state: { recipe, imageUrl: imageUrls[recipe.image?._id] } });
-  }, [navigate, imageUrls]);
+    navigate(`/recipe/${recipe._id}`, { state: { recipe, imageUrl: recipe.image } });
+  }, [navigate]);
 
   const handleLikeClick = useCallback(async (recipe) => {
     const token = localStorage.getItem('token'); 
@@ -136,28 +111,28 @@ const RecipeList = () => {
               key={recipe._id}
               className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer transition-transform transform hover:scale-105"
               onClick={() => handleRecipeClick(recipe)}
+              style={{ width: '280px', height: '360px' }}  // Fixed size
             >
-              <div className={`relative w-full h-48 ${loadingImages[recipe.image?._id] ? 'bg-gray-300' : ''}`}>
-                {recipe.image && imageUrls[recipe.image._id] ? (
+              <div className="relative w-full h-48 bg-gray-300">  {/* Adjusted image height */}
+                {recipe.image ? (
                   <img
-                    src={imageUrls[recipe.image._id]}
+                    src={recipe.image}
                     alt={recipe.name}
                     className="absolute inset-0 w-full h-full object-cover"
-                    onLoad={() => setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: false }))}
                     loading="lazy"
                     role="presentation"
                     decoding="async"
-                    fetchPriority='high'
+                    fetchPriority="high"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-400">Loading...</div>
                 )}
               </div>
-              <div className="p-4">
-                <h2 className="text-xl font-semibold mb-2 text-primary">{recipe.name}</h2>
+              <div className="p-4 flex flex-col justify-between" style={{ height: 'calc(100% - 12rem)' }}>
+                <h2 className="text-lg font-semibold mb-2 text-primary text-green-600">{recipe.name}</h2>
                 <p className="text-gray-600">Type: {recipe.type === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'}</p>
                 <p className="text-gray-600 mb-4">Likes: {recipe.likes}</p>
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mt-auto">
                   <div className="flex items-center">
                     <button onClick={(e) => { e.stopPropagation(); handleLikeClick(recipe); }}>
                       {isLikedByUser(recipe) ? <ThumbUpIcon className="text-blue-500" /> : <ThumbUpOffAltIcon className="text-green-600" />}

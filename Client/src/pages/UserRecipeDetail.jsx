@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from '../utils/axios';
 import Layout from '../components/Layout';
 import { useDispatch } from 'react-redux';
 import { showLoading, hideLoading } from '../redux/alertSlice';
+import { toast } from 'react-toastify';
 
 const UserRecipeDetail = () => {
   const location = useLocation();
@@ -13,6 +14,11 @@ const UserRecipeDetail = () => {
   const [newImage, setNewImage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    // Log the imageUrl to check if it's correct
+    console.log('Image URL:', imageUrl);
+  }, [imageUrl]);
 
   if (!recipe) {
     return <div>No recipe selected.</div>;
@@ -33,25 +39,37 @@ const UserRecipeDetail = () => {
     try {
       dispatch(showLoading());
 
-      const formData = new FormData();
-      formData.append('name', updatedRecipe.name);
-      formData.append('type', updatedRecipe.type);
-      formData.append('process', updatedRecipe.process);
-      formData.append('likes', updatedRecipe.likes);
-      formData.append('ingredients', updatedRecipe.ingredients); // Send as a string
+      let imageUrl = updatedRecipe.image; // Preserve old image URL if new image is not uploaded
 
+      // Upload new image if provided
       if (newImage) {
-        formData.append('image', newImage);
+        const imageData = new FormData();
+        imageData.append('image', newImage);
+
+        const imageUploadResponse = await axios.post('/api/upload', imageData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+
+        imageUrl = imageUploadResponse.data.imageUrl;
       }
 
-      const response = await axios.put(`/api/recipes/${recipe._id}`, formData, {
+      // Update recipe with new data
+      const updatedRecipeData = {
+        ...updatedRecipe,
+        image: imageUrl, // Update image URL
+      };
+
+      const response = await axios.put(`/api/recipes/${recipe._id}`, updatedRecipeData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`, // Add token if needed
         },
       });
 
       if (response.data.success) {
+        toast.success('Recipe updated successfully!');
         navigate(-1);
       } else {
         setErrorMessage('Error updating recipe. Please try again.');
@@ -74,13 +92,18 @@ const UserRecipeDetail = () => {
               src={imageUrl}
               alt={updatedRecipe.name}
               className="w-full h-100 object-cover"
+              loading="lazy"
+              role="presentation"
+              decoding="async"
+              fetchPriority="high"
+              style={{ maxHeight: '500px' }} // Set a max height if needed
             />
           )}
           <div className="p-6">
-            <h1 className="text-3xl font-bold mb-4">{updatedRecipe.name}</h1>
+            <h1 className="text-3xl font-bold mb-4 text-green-600">{updatedRecipe.name}</h1>
             <form onSubmit={handleSave} className="space-y-4">
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">Type</label>
+                <label className="block text-green-600 text-sm font-bold mb-2">Type</label>
                 <input
                   name="type"
                   value={updatedRecipe.type}
@@ -90,7 +113,7 @@ const UserRecipeDetail = () => {
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">Ingredients (separate with commas)</label>
+                <label className="block text-green-600 text-sm font-bold mb-2">Ingredients (separate with commas)</label>
                 <input
                   name="ingredients"
                   value={updatedRecipe.ingredients}
@@ -100,7 +123,7 @@ const UserRecipeDetail = () => {
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">Process</label>
+                <label className="block text-green-600 text-sm font-bold mb-2">Process</label>
                 <textarea
                   name="process"
                   value={updatedRecipe.process}
@@ -110,11 +133,15 @@ const UserRecipeDetail = () => {
                 />
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">Likes : <span>{updatedRecipe.likes}</span></label>
+                <label className="block text-green-600 text-sm font-bold mb-2">Likes : <span>{updatedRecipe.likes}</span></label>
               </div>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">Update Image</label>
-                <input type="file" onChange={handleImageChange} className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" />
+                <label className="block text-green-600 text-sm font-bold mb-2">Update Image</label>
+                <input
+                  type="file"
+                  onChange={handleImageChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-green-600 leading-tight focus:outline-none focus:shadow-outline"
+                />
               </div>
               {errorMessage && <p className="text-red-500 mb-4">{errorMessage}</p>}
               <button

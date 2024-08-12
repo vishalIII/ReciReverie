@@ -19,7 +19,7 @@ const Home = () => {
 
     return (
         <Layout>
-            <h1 className='text-center text-4xl m-5 text-green-600'>Explore your favourite recipes</h1>
+            <h1 className='text-center text-4xl m-5 text-green-600 font-semibold'>Explore your favourite recipes</h1>
             <RecipeList/>
         </Layout>
     );

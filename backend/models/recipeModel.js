@@ -20,8 +20,8 @@ const RecipeSchema = new Schema({
     required: true,
   },
   image: {
-    type: Schema.Types.ObjectId,
-    ref: 'Image',
+    type: String,
+    default:"https://th.bing.com/th/id/OIP.TdfS0KCXffAUAt1020UAIAAAAA?w=165&h=169&c=7&r=0&o=5&pid=1.7"
   },
   likes: {
     type: Number,

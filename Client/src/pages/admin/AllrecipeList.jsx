@@ -60,22 +60,21 @@ const AllRecipeList = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-4 text-green-600">All Recipes</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="">
         {recipes.map((recipe) => (
-          <div key={recipe._id} className="bg-white shadow-md rounded-lg p-4">
+          <div key={recipe._id} className="bg-white shadow-md rounded-lg p-4 mt-8">
             <h2 className="text-2xl font-semibold text-gray-800">{recipe.name}</h2>
             <p className="text-gray-600"><strong>Type:</strong> {recipe.type}</p>
             <p className="text-gray-600"><strong>Ingredients:</strong> {recipe.ingredients}</p>
             <p className="text-gray-600"><strong>Process:</strong> {recipe.process}</p>
             <p className="text-gray-600"><strong>Likes:</strong> {recipe.likes}</p>
             <p className="text-gray-600"><strong>Submitted by:</strong> {recipe.userInfo.name}</p>
-            {recipe.image && imageUrls[recipe.image._id] && (
               <img
-                src={imageUrls[recipe.image._id]}
+                src={recipe.image}
                 alt={recipe.name}
                 className="w-full h-auto mt-4"
+                style={{ width: '280px', height: '200px' }}  // Fixed size
               />
-            )}
             <button
               onClick={() => toggleStatus(recipe._id)}
               className="mt-4 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 flex items-center justify-center"

@@ -6,8 +6,6 @@ import { showLoading, hideLoading } from '../redux/alertSlice';
 
 const UserRecipeList = () => {
   const [recipes, setRecipes] = useState([]);
-  const [imageUrls, setImageUrls] = useState({});
-  const [loadingImages, setLoadingImages] = useState({});
   const { user } = useSelector((state) => state.user);
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -21,28 +19,6 @@ const UserRecipeList = () => {
             params: { email: user.email, name: user.name }
           });
           setRecipes(response.data);
-
-          const imagePromises = response.data.map(async (recipe) => {
-            if (recipe.image && recipe.image._id) {
-              try {
-                setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: true }));
-                const imgResponse = await axios.get(`/api/image/${recipe.image._id}`, { responseType: 'blob' });
-                const url = URL.createObjectURL(imgResponse.data);
-                setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: false }));
-                return { id: recipe.image._id, url };
-              } catch (error) {
-                console.error('Error fetching image:', error);
-                return { id: recipe.image._id, url: null };
-              }
-            }
-            return { id: null, url: null };
-          });
-
-          const images = await Promise.all(imagePromises);
-          setImageUrls(images.reduce((acc, { id, url }) => {
-            if (id) acc[id] = url;
-            return acc;
-          }, {}));
         }
       } catch (error) {
         console.error('Error fetching recipes:', error);
@@ -52,10 +28,10 @@ const UserRecipeList = () => {
     };
 
     fetchRecipes();
-  }, [user]);
+  }, [user, dispatch]);
 
   const handleRecipeClick = (recipe) => {
-    navigate(`/user-recipe/${recipe._id}`, { state: { recipe, imageUrl: imageUrls[recipe.image._id] } });
+    navigate(`/user-recipe/${recipe._id}`, { state: { recipe, imageUrl: recipe.image } });
   };
 
   return (
@@ -67,23 +43,23 @@ const UserRecipeList = () => {
             key={recipe._id}
             className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer"
             onClick={() => handleRecipeClick(recipe)}
+            style={{ width: '320px', height: '320px' }}  // Fixed size
           >
-            <div className={`relative w-full h-48 ${loadingImages[recipe.image?._id] ? 'bg-gray-300' : ''}`}>
-              {recipe.image && imageUrls[recipe.image._id] && (
+            <div className="relative w-full h-48 bg-gray-300">
+              {recipe.image && (
                 <img
-                  src={imageUrls[recipe.image._id]}
+                  src={recipe.image}
                   alt={recipe.name}
                   className="absolute inset-0 w-full h-full object-cover"
-                  onLoad={() => setLoadingImages((prev) => ({ ...prev, [recipe.image._id]: false }))}
                   loading="lazy"
-                    role="presentation"
-                    decoding="async"
-                    fetchPriority='high'
+                  role="presentation"
+                  decoding="async"
+                  fetchPriority="high"
                 />
               )}
             </div>
             <div className="p-4">
-              <h2 className="text-xl font-semibold mb-2">{recipe.name}</h2>
+              <h2 className="text-xl font-semibold mb-2 text-green-600">{recipe.name}</h2>
               <p className="text-gray-600">Type: {recipe.type}</p>
             </div>
           </div>

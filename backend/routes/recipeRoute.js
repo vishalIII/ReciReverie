@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const Recipe = require('../models/recipeModel');
-const Image = require('../models/imageModel');
 const multer = require('multer');
 const auth = require('../middlewares/authMiddleware');
 
@@ -10,35 +9,24 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage }).single('image');
 
 // Create a new recipe
+// Create a new recipe
 router.post('/', upload, async (req, res) => {
-  const { name, type, ingredients, process, rating, userInfo } = req.body;
+  const { name, type, ingredients, process, image, rating, userInfo } = req.body;
 
   // Validate incoming data
   if (!name || !type || !ingredients || !process || !userInfo) {
     return res.status(400).json({ message: 'Missing required fields', success: false });
   }
 
-  // Ensure file is uploaded
-  if (!req.file) {
-    return res.status(400).json({ message: 'Image file is required', success: false });
-  }
-
-  const newImage = new Image({
-    data: req.file.buffer,
-    contentType: req.file.mimetype,
-  });
-
   try {
-    const savedImage = await newImage.save();
-
     const newRecipe = new Recipe({
       name,
       type,
-      ingredients, // Assuming ingredients are sent as a comma-separated string
+      ingredients,
       process,
-      image: savedImage._id,
+      image,
       rating,
-      userInfo: JSON.parse(userInfo),
+      userInfo, // No need to parse this, it's already an object
     });
 
     const savedRecipe = await newRecipe.save();
@@ -49,17 +37,12 @@ router.post('/', upload, async (req, res) => {
   }
 });
 
+
 // Get all recipes
 router.get('/all', async (req, res) => {
   try {
-    const recipes = await Recipe.find().populate('image');
-    const recipesWithBase64Images = recipes.map(recipe => {
-      if (recipe.image && recipe.image.data) {
-        recipe.image.data = recipe.image.data.toString('base64');
-      }
-      return recipe;
-    });
-    res.json(recipesWithBase64Images);
+    const recipes = await Recipe.find();
+    res.json(recipes);
   } catch (err) {
     console.error('Error fetching recipes:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -69,14 +52,8 @@ router.get('/all', async (req, res) => {
 // Get all show recipes
 router.get('/', async (req, res) => {
   try {
-    const recipes = await Recipe.find({ status: "show" }).populate('image');
-    const recipesWithBase64Images = recipes.map(recipe => {
-      if (recipe.image && recipe.image.data) {
-        recipe.image.data = recipe.image.data.toString('base64');
-      }
-      return recipe;
-    });
-    res.json(recipesWithBase64Images);
+    const recipes = await Recipe.find({ status: "show" });
+    res.json(recipes);
   } catch (err) {
     console.error('Error fetching recipes:', err);
     res.status(500).json({ message: 'Internal server error' });
@@ -90,21 +67,14 @@ router.get('/user', async (req, res) => {
     if (!email || !name) {
       return res.status(400).json({ message: 'Missing required query parameters' });
     }
-    const recipes = await Recipe.find({ 'userInfo.email': email, 'userInfo.name': name }).populate('image');
-
-    const recipesWithBase64Images = recipes.map(recipe => {
-      if (recipe.image && recipe.image.data) {
-        recipe.image.data = recipe.image.data.toString('base64');
-      }
-      return recipe;
-    });
-
-    res.json(recipesWithBase64Images);
+    const recipes = await Recipe.find({ 'userInfo.email': email, 'userInfo.name': name });
+    res.json(recipes);
   } catch (err) {
     console.error('Error fetching user recipes:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
 
 // Toggle recipe status
 router.put('/toggle-status/:id', async (req, res) => {
@@ -125,9 +95,9 @@ router.put('/toggle-status/:id', async (req, res) => {
 // Update a recipe
 router.put('/:id', auth, upload, async (req, res) => {
   const { id } = req.params;
-  const { name, type, process, likes, ingredients } = req.body;
+  const { name, type, process,image, likes, ingredients } = req.body;
 
-  if (!name || !type || !process || !ingredients) {
+  if (!name || !type || !process || !image || !ingredients) {
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
@@ -135,21 +105,13 @@ router.put('/:id', auth, upload, async (req, res) => {
     const updatedData = {
       name,
       type,
+      image,
       process,
       likes,
-      ingredients: ingredients.split(','),
+      ingredients,
     };
 
-    if (req.file) {
-      const newImage = new Image({
-        data: req.file.buffer,
-        contentType: req.file.mimetype,
-      });
-      const savedImage = await newImage.save();
-      updatedData.image = savedImage._id;
-    }
-
-    const updatedRecipe = await Recipe.findByIdAndUpdate(id, updatedData, { new: true }).populate('image');
+    const updatedRecipe = await Recipe.findByIdAndUpdate(id, updatedData, { new: true });
 
     if (!updatedRecipe) {
       return res.status(404).json({ success: false, message: 'Recipe not found' });
