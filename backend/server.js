@@ -11,7 +11,7 @@ const port = process.env.PORT || 3000;
 connectToMongo();
 
 const corsOptions = {
-  origin: 'https://66bb6ed394302c376344fae7--celebrated-tanuki-cc8e6d.netlify.app', 
+  origin: 'https://66bba5096652189691b2eed1--celebrated-tanuki-cc8e6d.netlify.app', 
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   allowedHeaders: ['Authorization', 'Content-Type'],
   credentials: true,
